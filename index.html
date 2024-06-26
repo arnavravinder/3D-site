@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Dancing Aliens</title>
+  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+</head>
+<body>
+  <a-scene>
+    <!-- Environment -->
+    <a-sky color="#2E86AB"></a-sky> <!-- Cool blue color for the sky -->
+    <a-plane position="0 0 -4" rotation="-90 0 0" width="20" height="20" color="#7BC8A4"></a-plane> <!-- Green ground plane -->
+
+    <!-- Blocks -->
+    <a-box position="-1 0 -3" rotation="0 45 0" width="1" height="1" depth="1" color="#F4A261"></a-box>
+    <a-box position="1 0 -3" rotation="0 30 0" width="1" height="1" depth="1" color="#2A9D8F"></a-box>
+    <a-box position="0 0 -5" rotation="0 60 0" width="1" height="1" depth="1" color="#E76F51"></a-box>
+
+    <!-- Alien Models -->
+    <a-entity id="alien1" position="-2 0 -3" scale="0.00066 0.00066 0.00066" gltf-model="#a1Model"></a-entity>
+    <a-entity id="alien2" position="2 0 -3" scale="0.3 0.3 0.3" gltf-model="#a2Model"></a-entity>
+
+    <!-- Model Assets -->
+    <a-assets>
+      <a-asset-item id="a1Model" src="models/a1.gltf"></a-asset-item>
+      <a-asset-item id="a2Model" src="models/a2.gltf"></a-asset-item>
+    </a-assets>
+
+    <!-- Music -->
+    <a-sound id="backgroundMusic" src="song.mp3" autoplay="true" loop="true"></a-sound>
+
+    <!-- Camera -->
+    <a-entity camera look-controls position="0 1.6 0">
+      <a-entity cursor="fuse: true; fuseTimeout: 500"
+                position="0 0 -1"
+                geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                material="color: cyan; shader: flat">
+      </a-entity>
+    </a-entity>
+  </a-scene>
+
+  <!-- JavaScript to move models and handle AudioContext -->
+  <script>
+    AFRAME.registerComponent('move-models', {
+      init: function () {
+        const el = this.el;
+        const music = document.querySelector('#backgroundMusic');
+        
+        // Wait until sound is loaded
+        music.addEventListener('sound-loaded', () => {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const analyser = audioContext.createAnalyser();
+          const source = audioContext.createMediaElementSource(music.components.sound.media);
+          source.connect(analyser);
+          analyser.connect(audioContext.destination);
+
+          // Move models based on audio data
+          let dataArray = new Uint8Array(analyser.frequencyBinCount);
+          const moveSpeed = 0.02; // Speed of movement
+
+          function moveModels() {
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Example: Move alien1 based on bass frequency
+            const bassValue = dataArray[2]; // Adjust this index for appropriate frequency
+            el.querySelector('#alien1').object3D.position.x += (bassValue / 100 - 1) * moveSpeed;
+            el.querySelector('#alien1').object3D.position.y += (bassValue / 100 - 1) * moveSpeed;
+            el.querySelector('#alien1').object3D.position.z += (bassValue / 100 - 1) * moveSpeed;
+
+            // Example: Move alien2 randomly
+            el.querySelector('#alien2').object3D.position.x += (Math.random() - 0.5) * moveSpeed;
+            el.querySelector('#alien2').object3D.position.y += (Math.random() - 0.5) * moveSpeed;
+            el.querySelector('#alien2').object3D.position.z += (Math.random() - 0.5) * moveSpeed;
+
+            requestAnimationFrame(moveModels);
+          }
+
+          // Start moving models
+          moveModels();
+        });
+      }
+    });
+
+    // Apply the move-models component to the scene
+    document.querySelector('a-scene').setAttribute('move-models', '');
+  </script>
+</body>
+</html>
